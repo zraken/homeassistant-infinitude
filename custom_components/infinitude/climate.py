@@ -186,7 +186,6 @@ class InfinitudeZone(ClimateEntity):
         self._current_temperature = None
         self._current_humidity = None
         self._hvac_mode = None  # auto, heat, cool, off, fanonly
-        self._hvac_action = None  # active_heat, active_cool, idle, more?
         self._fan_mode = None  # off, high, med, low
 
         self.zone_name = None
@@ -276,7 +275,8 @@ class InfinitudeZone(ClimateEntity):
         self.zone_name = get_safe(self.zone_status, "name")
         self._temperature_unit = get_safe(self.system_config, "cfgem")
         self._current_temperature = float(get_safe(self.zone_status, "rt"))
-        self._hvac_action = get_safe(self.zone_status, "zoneconditioning")
+        # My HVAC does not have zoneconditioning but hvac_action is coded as mode
+        self._hvac_action = get_safe(self.system_status, "mode")
         self._current_humidity = float(get_safe(self.zone_status, "rh"))
         self._hvac_mode = get_safe(self.system_config, "mode")
         self.hold_state = get_safe(self.zone_config, "hold")
@@ -338,11 +338,16 @@ class InfinitudeZone(ClimateEntity):
 
         # Current timestamp can include a TZ offset in some systems.  It should be stripped off
         # since the timestamp is already in the local time.
-        local_time = get_safe(self.system_status, "localTime")
-        matches = re.match(
-            r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})([+-]\d{2}:\d{2})?$", local_time
-        )
-        local_time = matches.group(1)
+        # FIX: HVAC does not return time so use current system time
+        #####local_time = get_safe(self.system_status, "localTime")
+        #####matches = re.match(
+        #####    r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})([+-]\d{2}:\d{2})?$", local_time
+        #####)
+        #####local_time = matches.group(1)
+        now = datetime.datetime.now()
+        current_time = now.strftime("%Y-%m-%dT%H:%M:%S")
+        local_time = current_time
+
         dt = datetime.datetime.strptime(local_time, "%Y-%m-%dT%H:%M:%S")
 
         while self.activity_next is None:
